@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+backend/.venv/
+.venv/
+
+# Environment variables
+.env
+backend/.env
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# VS Code
+.vscode/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Leave form data
+data/raw/*
+data/processed/*
+data/crops/*
+
+# Keep folders if needed
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/crops/.gitkeep
