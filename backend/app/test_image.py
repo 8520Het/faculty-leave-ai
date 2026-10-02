@@ -2,14 +2,9 @@ from pathlib import Path
 import cv2
 
 
-# -------------------------------------------------
-# Project paths
-# -------------------------------------------------
-
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 CROPS_DIR = BASE_DIR / "data" / "crops"
-
 TABLE_PATH = CROPS_DIR / "arrangement_table.jpg"
 ASSIGNMENT_DIR = CROPS_DIR / "assignment_cells"
 
@@ -20,7 +15,7 @@ ASSIGNMENT_DIR.mkdir(
 
 
 # -------------------------------------------------
-# Load table
+# Load the cropped arrangement table
 # -------------------------------------------------
 
 table = cv2.imread(str(TABLE_PATH))
@@ -33,10 +28,8 @@ print("Table loaded")
 
 
 # -------------------------------------------------
-# Detected column boundaries
-#
-# These values come from your current table.
-# We will automate them later.
+# Current table boundaries
+# These values are based on the form layout.
 # -------------------------------------------------
 
 x_positions = [
@@ -45,17 +38,9 @@ x_positions = [
     181,   # Class
     234,   # Room
     364,   # Subject
-    557,   # Staff name
-    678    # Signature / right edge
+    557,   # Staff Name
+    678    # Signature/right edge
 ]
-
-
-# -------------------------------------------------
-# Detected horizontal boundaries
-#
-# Header occupies top part.
-# Data rows start after approximately y = 88.
-# -------------------------------------------------
 
 y_positions = [
     88,
@@ -67,10 +52,6 @@ y_positions = [
 ]
 
 
-# -------------------------------------------------
-# Column names
-# -------------------------------------------------
-
 column_names = [
     "number",
     "class",
@@ -81,40 +62,31 @@ column_names = [
 ]
 
 
-# -------------------------------------------------
-# Crop each data row
-# -------------------------------------------------
-
 padding = 4
-
 row_number = 1
 
 
-for row_index in range(
-    len(y_positions) - 1
-):
+# -------------------------------------------------
+# Crop all data cells
+# -------------------------------------------------
+
+for row_index in range(len(y_positions) - 1):
 
     y1 = y_positions[row_index] + padding
     y2 = y_positions[row_index + 1] - padding
 
+    if y2 <= y1:
+        continue
+
     print()
     print("Processing row:", row_number)
 
-    for column_index in range(
-        len(x_positions) - 1
-    ):
+    for column_index in range(len(x_positions) - 1):
 
-        x1 = (
-            x_positions[column_index]
-            + padding
-        )
+        x1 = x_positions[column_index] + padding
+        x2 = x_positions[column_index + 1] - padding
 
-        x2 = (
-            x_positions[column_index + 1]
-            - padding
-        )
-
-        if x2 <= x1 or y2 <= y1:
+        if x2 <= x1:
             continue
 
         cell = table[
@@ -122,35 +94,24 @@ for row_index in range(
             x1:x2
         ]
 
-        column_name = (
-            column_names[column_index]
-        )
+        column_name = column_names[column_index]
 
         filename = (
-            f"row_{row_number}_"
-            f"{column_name}.jpg"
+            f"row_{row_number}_{column_name}.jpg"
         )
 
-        output_path = (
-            ASSIGNMENT_DIR / filename
-        )
+        output_path = ASSIGNMENT_DIR / filename
 
         cv2.imwrite(
             str(output_path),
             cell
         )
 
-        print(
-            "Saved:",
-            filename
-        )
+        print("Saved:", filename)
 
     row_number += 1
 
 
 print()
-print("Done")
-print(
-    "Cells saved to:",
-    ASSIGNMENT_DIR
-)
+print("Cell extraction complete")
+print("Saved to:", ASSIGNMENT_DIR)
