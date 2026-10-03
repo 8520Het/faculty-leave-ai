@@ -1,10 +1,9 @@
 from pathlib import Path
 import cv2
 
+from paths import CROPS_DIR
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-CROPS_DIR = BASE_DIR / "data" / "crops"
 TABLE_PATH = CROPS_DIR / "arrangement_table.jpg"
 ASSIGNMENT_DIR = CROPS_DIR / "assignment_cells"
 

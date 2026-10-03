@@ -64,12 +64,20 @@ def normalize_college_time(
 
 def process_all_rows(
     applicant_name,
-    year
+    year,
+    table_path=None,
+    output_dir=None,
+    rows=None,
+    debug_dirs=None,
 ):
 
-    rows = detect_filled_rows(
-        TABLE_PATH
-    )
+    debug_dirs = debug_dirs or {}
+
+    if rows is None:
+        rows = detect_filled_rows(
+            table_path or TABLE_PATH,
+            output_dir=output_dir,
+        )
 
     final_results = []
 
@@ -118,7 +126,8 @@ def process_all_rows(
         # ====================================================
 
         ocr_result = ocr_assignment_row(
-            image_path
+            image_path,
+            debug_dir=debug_dirs.get("ocr_debug"),
         )
 
 
@@ -155,7 +164,9 @@ def process_all_rows(
 
         class_selection = (
             choose_best_class_ocr(
-                image_path
+                image_path,
+                debug_dir=debug_dirs.get("ocr_debug"),
+                class_debug_dir=debug_dirs.get("class_second_pass"),
             )
         )
 
@@ -289,7 +300,8 @@ def process_all_rows(
 
         subject_second_pass = (
             run_subject_second_pass(
-                image_path
+                image_path,
+                debug_dir=debug_dirs.get("subject_second_pass"),
             )
         )
 
@@ -778,6 +790,12 @@ def process_all_rows(
 
             "status":
                 row_status,
+
+            "image_path":
+                str(image_path),
+
+            "ink_ratio":
+                row.get("ink_ratio"),
 
 
             "class_ocr": {

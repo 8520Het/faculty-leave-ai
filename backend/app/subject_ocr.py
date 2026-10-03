@@ -6,42 +6,7 @@ import cv2
 from ocr_fields import run_trocr
 from academic_master import SUBJECTS
 from timetable import get_active_semesters
-
-
-# ============================================================
-# PROJECT PATHS
-# ============================================================
-
-# subject_ocr.py:
-# faculty-leave-ai/backend/app/subject_ocr.py
-#
-# parents[0] -> app
-# parents[1] -> backend
-# parents[2] -> faculty-leave-ai
-PROJECT_ROOT = (
-    Path(__file__)
-    .resolve()
-    .parents[2]
-)
-
-DATA_DIR = (
-    PROJECT_ROOT
-    /
-    "data"
-)
-
-DEBUG_DIR = (
-    DATA_DIR
-    /
-    "crops"
-    /
-    "subject_second_pass"
-)
-
-DEBUG_DIR.mkdir(
-    parents=True,
-    exist_ok=True
-)
+from paths import PROJECT_ROOT, CROPS_DIR
 
 
 # ============================================================
@@ -459,7 +424,8 @@ def preprocess_variant_4(image):
 # ============================================================
 
 def run_subject_second_pass(
-    row_image_path
+    row_image_path,
+    debug_dir=None
 ):
 
     row_image_path = Path(
@@ -609,14 +575,16 @@ def run_subject_second_pass(
         # Save debug image
         # ----------------------------------------------------
 
+        if debug_dir is None:
+            output_dir = CROPS_DIR / "subject_second_pass"
+        else:
+            output_dir = Path(debug_dir)
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+
         debug_path = (
-
-            DEBUG_DIR
-
-            /
-
-            f"{row_name}_"
-            f"{variant_name}.jpg"
+            output_dir
+            / f"{row_name}_{variant_name}.jpg"
         )
 
 

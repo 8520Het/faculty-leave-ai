@@ -52,7 +52,9 @@ def calculate_evidence_score(parsed):
 # ============================================================
 
 def choose_best_class_ocr(
-    row_image_path
+    row_image_path,
+    debug_dir=None,
+    class_debug_dir=None,
 ):
 
     # --------------------------------------------------------
@@ -60,7 +62,8 @@ def choose_best_class_ocr(
     # --------------------------------------------------------
 
     normal_ocr = ocr_assignment_row(
-        row_image_path
+        row_image_path,
+        debug_dir=debug_dir,
     )["class"]
 
     normal_parsed = parse_class_field(
@@ -77,7 +80,8 @@ def choose_best_class_ocr(
     # --------------------------------------------------------
 
     second_ocr = ocr_class_second_pass(
-        row_image_path
+        row_image_path,
+        debug_dir=class_debug_dir,
     )
 
     second_parsed = parse_class_field(

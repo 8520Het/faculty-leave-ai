@@ -42,98 +42,43 @@ def group_assignments_by_substitute(
 
         # Only use rows that successfully reached
         # the validated stage.
-        if (
-            result.get("status")
-            != "VALIDATED_WITH_REVIEW"
-        ):
+        if result.get("status") not in {
+            "VALIDATED_WITH_REVIEW",
+            "REVIEWED",
+            "APPROVED",
+        }:
             continue
 
 
-        timetable = result.get(
-            "timetable"
-        )
+        timetable = result.get("timetable") or {}
+        substitute = result.get("substitute") or {}
+        parsed = result.get("parsed") or {}
 
-        substitute = result.get(
-            "substitute"
-        )
+        email = substitute.get("email")
+        semester = timetable.get("semester") or parsed.get("semester")
+        division = timetable.get("division") or parsed.get("division")
+        subject = timetable.get("subject") or parsed.get("subject")
+        room = timetable.get("room") or parsed.get("room")
+        start_time = timetable.get("start_time") or parsed.get("start_time")
+        end_time = timetable.get("end_time") or parsed.get("end_time")
 
-        parsed = result.get(
-            "parsed"
-        )
-
-
-        if (
-            timetable is None
-            or substitute is None
-        ):
+        if not email or semester is None or not subject:
             continue
-
-
-        email = substitute.get(
-            "email"
-        )
-
-
-        if not email:
-            continue
-
 
         grouped[email].append(
             {
-                "row_number":
-                    result.get(
-                        "row_number"
-                    ),
-
-                "substitute_name":
-                    substitute.get(
-                        "name"
-                    ),
-
-                "semester":
-                    timetable.get(
-                        "semester"
-                    ),
-
-                "division":
-                    timetable.get(
-                        "division"
-                    ),
-
-                "lecture_day":
-                    parsed.get(
-                        "day"
-                    ),
-
-                "lecture_month":
-                    parsed.get(
-                        "month"
-                    ),
-
-                "start_time":
-                    timetable.get(
-                        "start_time"
-                    ),
-
-                "end_time":
-                    timetable.get(
-                        "end_time"
-                    ),
-
-                "room":
-                    timetable.get(
-                        "room"
-                    ),
-
-                "subject":
-                    timetable.get(
-                        "subject"
-                    ),
-
-                "normal_faculty":
-                    timetable.get(
-                        "normal_faculty"
-                    )
+                "row_number": result.get("row_number"),
+                "substitute_name": substitute.get("name"),
+                "semester": semester,
+                "division": division,
+                "lecture_day": parsed.get("day"),
+                "lecture_month": parsed.get("month"),
+                "start_time": start_time,
+                "end_time": end_time,
+                "room": room,
+                "subject": subject,
+                "normal_faculty": timetable.get("normal_faculty")
+                or result.get("applicant_name"),
             }
         )
 

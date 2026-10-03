@@ -3,6 +3,7 @@ from pathlib import Path
 import cv2
 
 from ocr_fields import run_trocr
+from paths import PROJECT_ROOT, CROPS_DIR
 
 
 # ============================================================
@@ -76,7 +77,8 @@ def preprocess_class_region(image):
 # ============================================================
 
 def ocr_class_second_pass(
-    row_image_path
+    row_image_path,
+    debug_dir=None
 ):
 
     row_image_path = Path(
@@ -120,25 +122,11 @@ def ocr_class_second_pass(
     # DEBUG OUTPUT
     # ========================================================
 
-    base_dir = (
-        Path(__file__)
-        .resolve()
-        .parent
-        .parent
-        .parent
-    )
+    if debug_dir is None:
+        debug_dir = CROPS_DIR / "class_second_pass"
 
-    debug_dir = (
-        base_dir
-        / "data"
-        / "crops"
-        / "class_second_pass"
-    )
-
-    debug_dir.mkdir(
-        parents=True,
-        exist_ok=True
-    )
+    debug_dir = Path(debug_dir)
+    debug_dir.mkdir(parents=True, exist_ok=True)
 
     debug_path = (
         debug_dir
@@ -168,16 +156,8 @@ def ocr_class_second_pass(
 
 if __name__ == "__main__":
 
-    BASE_DIR = (
-        Path(__file__)
-        .resolve()
-        .parent
-        .parent
-        .parent
-    )
-
     ROW_DIR = (
-        BASE_DIR
+        PROJECT_ROOT
         / "data"
         / "crops"
         / "detected_rows"

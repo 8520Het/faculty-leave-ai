@@ -1,35 +1,52 @@
 from pathlib import Path
 
 import cv2
-import torch
 
-from PIL import Image
-from transformers import TrOCRProcessor, VisionEncoderDecoderModel
+from paths import PROJECT_ROOT, CROPS_DIR
 
 
-# ============================================================
-# MODEL SETUP
-# ============================================================
+PROCESSOR = None
+MODEL = None
+DEVICE = None
+_MODEL_LOAD_ERROR = None
 
-print("Loading TrOCR model...")
 
-PROCESSOR = TrOCRProcessor.from_pretrained(
-    "microsoft/trocr-base-handwritten"
-)
+def _load_trocr():
+    global PROCESSOR, MODEL, DEVICE, _MODEL_LOAD_ERROR
 
-MODEL = VisionEncoderDecoderModel.from_pretrained(
-    "microsoft/trocr-base-handwritten"
-)
+    if MODEL is not None:
+        return
 
-DEVICE = torch.device(
-    "cuda"
-    if torch.cuda.is_available()
-    else "cpu"
-)
+    if _MODEL_LOAD_ERROR is not None:
+        raise RuntimeError(_MODEL_LOAD_ERROR)
 
-MODEL.to(DEVICE)
+    try:
+        import torch
+        from transformers import TrOCRProcessor, VisionEncoderDecoderModel
+        from PIL import Image  # noqa: F401
+    except Exception as exc:
+        _MODEL_LOAD_ERROR = (
+            "TrOCR dependencies are not available. "
+            "Install torch and transformers, or use DEMO_MODE=1. "
+            f"Original error: {exc}"
+        )
+        raise RuntimeError(_MODEL_LOAD_ERROR) from exc
 
-print("TrOCR model loaded on:", DEVICE)
+    print("Loading TrOCR model...")
+
+    PROCESSOR = TrOCRProcessor.from_pretrained(
+        "microsoft/trocr-base-handwritten"
+    )
+    MODEL = VisionEncoderDecoderModel.from_pretrained(
+        "microsoft/trocr-base-handwritten"
+    )
+    DEVICE = torch.device(
+        "cuda" if torch.cuda.is_available() else "cpu"
+    )
+    MODEL.to(DEVICE)
+    MODEL.eval()
+
+    print("TrOCR model loaded on:", DEVICE)
 
 
 # ============================================================
@@ -104,11 +121,15 @@ def preprocess_crop(image):
 # ============================================================
 
 def run_trocr(image):
+    from PIL import Image
+    import torch
 
-    rgb = cv2.cvtColor(
-        image,
-        cv2.COLOR_GRAY2RGB
-    )
+    _load_trocr()
+
+    if len(image.shape) == 2:
+        rgb = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+    else:
+        rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
     pil_image = Image.fromarray(rgb)
 
@@ -117,11 +138,12 @@ def run_trocr(image):
         return_tensors="pt"
     ).pixel_values.to(DEVICE)
 
-    generated_ids = MODEL.generate(
-        pixel_values,
-        max_new_tokens=40,
-        num_beams=1
-    )
+    with torch.no_grad():
+        generated_ids = MODEL.generate(
+            pixel_values,
+            max_new_tokens=40,
+            num_beams=1
+        )
 
     text = PROCESSOR.batch_decode(
         generated_ids,
@@ -135,7 +157,7 @@ def run_trocr(image):
 # OCR ONE ASSIGNMENT ROW
 # ============================================================
 
-def ocr_assignment_row(row_image_path):
+def ocr_assignment_row(row_image_path, debug_dir=None):
 
     row_image_path = Path(row_image_path)
 
@@ -188,25 +210,11 @@ def ocr_assignment_row(row_image_path):
     # DEBUG DIRECTORY
     # ========================================================
 
-    base_dir = (
-        Path(__file__)
-        .resolve()
-        .parent
-        .parent
-        .parent
-    )
+    if debug_dir is None:
+        debug_dir = CROPS_DIR / "ocr_debug"
 
-    debug_dir = (
-        base_dir
-        / "data"
-        / "crops"
-        / "ocr_debug"
-    )
-
-    debug_dir.mkdir(
-        parents=True,
-        exist_ok=True
-    )
+    debug_dir = Path(debug_dir)
+    debug_dir.mkdir(parents=True, exist_ok=True)
 
     row_name = row_image_path.stem
 
@@ -258,16 +266,8 @@ def ocr_assignment_row(row_image_path):
 
 if __name__ == "__main__":
 
-    BASE_DIR = (
-        Path(__file__)
-        .resolve()
-        .parent
-        .parent
-        .parent
-    )
-
     TEST_ROW = (
-        BASE_DIR
+        PROJECT_ROOT
         / "data"
         / "crops"
         / "detected_rows"

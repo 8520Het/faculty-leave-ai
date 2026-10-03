@@ -35,6 +35,14 @@ def match_staff_member(
     auto_accept_threshold: float = 0.90
 ) -> StaffMatchResult:
 
+    if not raw_name:
+        return StaffMatchResult(
+            raw_name=raw_name or "",
+            matched_staff=None,
+            score=0.0,
+            requires_review=True,
+        )
+
     best_staff = None
     best_score = 0.0
 

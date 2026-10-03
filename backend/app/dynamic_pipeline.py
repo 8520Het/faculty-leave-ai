@@ -6,6 +6,7 @@ from field_parser import parse_assignment_fields
 from timetable_validator import rank_timetable_matches
 from staff_matcher import match_staff_member
 from email_preview import generate_email_preview
+from paths import PROJECT_ROOT
 
 
 # ============================================================
@@ -306,12 +307,8 @@ def process_assignment_row(
 
 if __name__ == "__main__":
 
-    BASE_DIR = Path(
-        __file__
-    ).resolve().parent.parent.parent
-
     ROW_PATH = (
-        BASE_DIR
+        PROJECT_ROOT
         / "data"
         / "crops"
         / "clean_rows"

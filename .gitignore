@@ -26,8 +26,16 @@ Thumbs.db
 data/raw/*
 data/processed/*
 data/crops/*
+data/forms/*
+data/*.db
+data/*.db-journal
 
-# Keep folders if needed
+# Keep folders
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 !data/crops/.gitkeep
+!data/forms/.gitkeep
+
+# Frontend
+frontend/node_modules/
+frontend/dist/

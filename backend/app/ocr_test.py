@@ -4,15 +4,10 @@ import torch
 from PIL import Image
 from transformers import TrOCRProcessor, VisionEncoderDecoderModel
 
+from paths import CROPS_DIR
 
-# -------------------------------------------------
-# Project paths
-# -------------------------------------------------
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-
-ROW_DIR = BASE_DIR / "data" / "crops" / "clean_rows"
-
+ROW_DIR = CROPS_DIR / "clean_rows"
 IMAGE_PATH = ROW_DIR / "assignment_row_1.jpg"
 
 

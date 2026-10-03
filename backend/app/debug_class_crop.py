@@ -1,11 +1,11 @@
 from pathlib import Path
 import cv2
 
+from paths import CROPS_DIR
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-TABLE_PATH = BASE_DIR / "data" / "crops" / "arrangement_table.jpg"
-OUTPUT_DIR = BASE_DIR / "data" / "crops" / "debug"
+TABLE_PATH = CROPS_DIR / "arrangement_table.jpg"
+OUTPUT_DIR = CROPS_DIR / "debug"
 
 OUTPUT_DIR.mkdir(
     parents=True,
