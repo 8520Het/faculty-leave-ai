@@ -250,22 +250,18 @@ def extract_date(text: str):
 # ============================================================
 
 def extract_time_range(text: str):
+    # Normalize common handwritten OCR quirks:
+    # 1. 10130, 11130 -> 10:30, 11:30
+    time_text = re.sub(r"\b(1[0-2])1(30|00)\b", r"\1:\2", text, flags=re.IGNORECASE)
+    # 2. 2i30, 3i30, 2l30 -> 2:30, 3:30
+    time_text = re.sub(r"\b(\d{1,2})[iIl|]((?:[0-5]\d|[0-5][coCO]))", r"\1:\2", time_text)
+    # 3. :3c, .3c, :3o -> :30
+    time_text = re.sub(r"[:.]([0-5])[coCO]\b", r":\g<1>0", time_text)
+    # 4. Standard dot as time separator: 2.30 -> 2:30
+    time_text = re.sub(r"(?<=\d)[.](?=\d{2}\b)", ":", time_text)
 
-    # Normalize OCR time separators.
-    #
-    # 2.30 -> 2:30
-
-    time_text = re.sub(
-        r"(?<=\d)[.](?=\d{2}\b)",
-        ":",
-        text
-    )
-
-    # Standard version:
-    #
-    # 2:30-3:30
-    # 2:30 3:30
-
+    # Find candidate times:
+    # 2:30-3:30, 10:30-11:30
     times = re.findall(
         r"\b(\d{1,2})[:.](\d{2})\b",
         time_text

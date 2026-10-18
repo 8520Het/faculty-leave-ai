@@ -1,47 +1,92 @@
-import { NavLink, Route, Routes } from "react-router-dom";
+import { Route, Routes, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
+import Navbar from "./components/Navbar.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Upload from "./pages/Upload.jsx";
 import Review from "./pages/Review.jsx";
-import Emails from "./pages/Emails.jsx";
-import History from "./pages/History.jsx";
+import Notifications from "./pages/Notifications.jsx";
 import MasterData from "./pages/MasterData.jsx";
+import Login from "./pages/Login.jsx";
 
-export default function App() {
+function ProtectedRoute({ children }) {
+  const { faculty } = useAuth();
+  if (!faculty) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
+function AppContent() {
+  const { faculty } = useAuth();
+
   return (
-    <div className="shell">
-      <aside className="sidebar">
-        <p className="eyebrow">IT Department desk</p>
-        <h1>Leave arrangements</h1>
-        <p className="lede">
-          Read a filled faculty leave form, check every assignment, then
-          generate grouped emails for substitutes.
-        </p>
-        <nav>
-          <NavLink to="/" end>
-            Dashboard
-          </NavLink>
-          <NavLink to="/upload">Upload</NavLink>
-          <NavLink to="/review">Review</NavLink>
-          <NavLink to="/emails">Emails</NavLink>
-          <NavLink to="/history">History</NavLink>
-          <NavLink to="/master">Master data</NavLink>
-        </nav>
-        <p className="footnote">
-          Works on leave-form images and similar arrangement tables. Unrelated
-          photos are not supported.
-        </p>
-      </aside>
-      <main className="content">
+    <div className="portal-app">
+      {faculty && <Navbar />}
+      <main className={`portal-main-content ${!faculty ? "auth-screen" : ""}`}>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/upload" element={<Upload />} />
-          <Route path="/review" element={<Review />} />
-          <Route path="/review/:formId" element={<Review />} />
-          <Route path="/emails" element={<Emails />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/master" element={<MasterData />} />
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/upload"
+            element={
+              <ProtectedRoute>
+                <Upload />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/review"
+            element={
+              <ProtectedRoute>
+                <Review />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/review/:formId"
+            element={
+              <ProtectedRoute>
+                <Review />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <Notifications />
+              </ProtectedRoute>
+            }
+          />
+          {/* Backwards compatibility aliases */}
+          <Route path="/emails" element={<Navigate to="/notifications" replace />} />
+          <Route path="/history" element={<Navigate to="/" replace />} />
+          <Route
+            path="/master"
+            element={
+              <ProtectedRoute>
+                <MasterData />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to={faculty ? "/" : "/login"} replace />} />
         </Routes>
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

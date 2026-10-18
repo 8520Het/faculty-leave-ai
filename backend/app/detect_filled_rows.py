@@ -32,18 +32,26 @@ def calculate_ink_ratio(row_image):
         gray = row_image
 
     height, width = gray.shape
-    margin_x = 8
-    margin_y = 4
+    margin_x = int(width * 0.05)
+    margin_y = 3
 
     if width > margin_x * 2 and height > margin_y * 2:
         gray = gray[
             margin_y:height - margin_y,
-            margin_x:width - margin_x,
+            margin_x:width - int(width * 0.15),
         ]
 
-    dark_pixels = gray < 180
-    ink_pixels = np.count_nonzero(dark_pixels)
-    total_pixels = gray.size
+    # Adaptive threshold isolates handwriting ink from paper shadows and phone camera gradient
+    binary = cv2.adaptiveThreshold(
+        gray,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY_INV,
+        15,
+        8,
+    )
+    ink_pixels = np.count_nonzero(binary)
+    total_pixels = binary.size
     if total_pixels == 0:
         return 0.0
     return ink_pixels / total_pixels
@@ -122,7 +130,7 @@ def fallback_relative_boundaries(height):
     return cleaned, "relative_layout_fallback"
 
 
-def equal_split_boundaries(height, row_count=5, header_ratio=0.32):
+def equal_split_boundaries(height, row_count=5, header_ratio=0.27):
     start = int(height * header_ratio)
     remaining = height - start
     positions = [start]
@@ -132,31 +140,65 @@ def equal_split_boundaries(height, row_count=5, header_ratio=0.32):
     return positions, "equal_split_fallback"
 
 
-def choose_row_boundaries(table):
-    line_bounds, strategy = detect_row_boundaries_from_lines(table)
-    height = table.shape[0]
+def filter_data_row_boundaries(bounds, height):
+    if not bounds or len(bounds) < 3:
+        return bounds
 
-    if line_bounds and 4 <= len(line_bounds) <= 12:
-        return line_bounds, strategy
+    # In standard leave forms, the table header occupies the top ~22% to 32% of the table.
+    # Lines before 0.20 * height are table top border or inside the header.
+    filtered = [y for y in bounds if y >= int(height * 0.20)]
+
+    # If first line after 0.20 is too far (> 0.35), use the last line before 0.20 as header bottom
+    if not filtered or filtered[0] > int(height * 0.35):
+        before = [y for y in bounds if y <= int(height * 0.35)]
+        if before:
+            filtered = [before[-1]] + [y for y in bounds if y > before[-1]]
+
+    # Drop tiny bottom borders or slice remnants (< 20px)
+    while len(filtered) >= 2 and (filtered[-1] - filtered[-2]) < 20:
+        filtered.pop()
+
+    return filtered
+
+
+def choose_row_boundaries(table):
+    height = table.shape[0]
+    line_bounds, strategy = detect_row_boundaries_from_lines(table)
+
+    if line_bounds:
+        data_bounds = filter_data_row_boundaries(line_bounds, height)
+        # We expect between 3 and 8 boundaries (giving 2 to 7 data rows; template has 5)
+        if data_bounds and 3 <= len(data_bounds) <= 8:
+            return data_bounds, strategy
 
     relative_bounds, relative_strategy = fallback_relative_boundaries(height)
     if len(relative_bounds) >= 4:
         return relative_bounds, relative_strategy
 
-    return equal_split_boundaries(height)
+    return equal_split_boundaries(height, row_count=5, header_ratio=0.27)
 
 
 def detect_filled_rows(
     table_path,
-    ink_threshold=0.05,
+    ink_threshold=0.03,
     output_dir=None,
+    crop_table_path=None,
 ):
     table_path = Path(table_path)
     table = cv2.imread(str(table_path))
     if table is None:
         raise FileNotFoundError(
-            f"Could not read cleaned table: {table_path}"
+            f"Could not read table: {table_path}"
         )
+
+    # If crop_table_path is provided, use it for row ink calculation & cropping
+    # (e.g. table_without_grid.jpg without heavy black grid lines)
+    if crop_table_path is not None:
+        crop_table = cv2.imread(str(crop_table_path))
+        if crop_table is None:
+            crop_table = table
+    else:
+        crop_table = table
 
     if output_dir is None:
         output_dir = OUTPUT_DIR
@@ -176,10 +218,10 @@ def detect_filled_rows(
     for index in range(len(y_positions) - 1):
         y1 = y_positions[index]
         y2 = y_positions[index + 1]
-        if y2 - y1 < 8:
+        if y2 - y1 < 15:
             continue
 
-        row = table[y1:y2, :]
+        row = crop_table[y1:y2, :]
         ink_ratio = calculate_ink_ratio(row)
         row_number = index + 1
 

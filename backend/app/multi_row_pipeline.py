@@ -794,6 +794,9 @@ def process_all_rows(
             "image_path":
                 str(image_path),
 
+            "applicant_name":
+                applicant_name,
+
             "ink_ratio":
                 row.get("ink_ratio"),
 

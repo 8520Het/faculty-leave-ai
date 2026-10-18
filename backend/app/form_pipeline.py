@@ -186,7 +186,8 @@ def extract_table_and_rows(image_path: Path, form_id: str) -> dict:
     _write(paths["processed"] / "normalized.jpg", page)
 
     table, box, table_strategy = detect_arrangement_table(page)
-    _write(paths["processed"] / "table.jpg", table)
+    table_path = paths["processed"] / "table.jpg"
+    _write(table_path, table)
 
     overlay = page.copy()
     x, y, w, h = box
@@ -198,9 +199,10 @@ def extract_table_and_rows(image_path: Path, form_id: str) -> dict:
     _write(cleaned_path, cleaned)
 
     rows = detect_filled_rows(
-        cleaned_path,
+        table_path,
         ink_threshold=INK_THRESHOLD,
         output_dir=paths["rows"],
+        crop_table_path=cleaned_path,
     )
 
     row_strategy = rows[0]["strategy"] if rows else "no_filled_rows"
@@ -211,6 +213,7 @@ def extract_table_and_rows(image_path: Path, form_id: str) -> dict:
         "row_strategy": row_strategy,
         "deskew_angle": normalized["angle"],
         "rows": rows,
+        "table_path": table_path,
         "cleaned_path": cleaned_path,
     }
 

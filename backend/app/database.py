@@ -87,6 +87,8 @@ class EmailPreview(Base):
     assignment_count: Mapped[int] = mapped_column(Integer, default=0)
     subject: Mapped[str] = mapped_column(Text)
     body: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(40), default="QUEUED")
+    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     generated_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)
     )

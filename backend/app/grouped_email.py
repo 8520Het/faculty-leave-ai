@@ -44,6 +44,7 @@ def group_assignments_by_substitute(
         # the validated stage.
         if result.get("status") not in {
             "VALIDATED_WITH_REVIEW",
+            "ACADEMIC_MATCH_REVIEW",
             "REVIEWED",
             "APPROVED",
         }:

@@ -71,6 +71,16 @@ FACULTY = {
     "VP": Faculty(
         "VP",
         "Viranchi Patel"
+    ),
+
+    "SRS": Faculty(
+        "SRS",
+        "Sandeep R. Suthar"
+    ),
+
+    "AKP": Faculty(
+        "AKP",
+        "Anand K. Patel"
     )
 }
 
@@ -242,6 +252,14 @@ SUBJECTS = [
         ["LECTURE", "LAB"]
     ),
 
+    Subject(
+        3,
+        "DBMS",
+        "Database Management Systems",
+        "SRS",
+        ["LECTURE", "LAB"]
+    ),
+
 
     # ========================================================
     # SEMESTER 4
@@ -346,6 +364,14 @@ SUBJECTS = [
         "ECES",
         "ANV",
         ["LECTURE"]
+    ),
+
+    Subject(
+        5,
+        "CN",
+        "Computer Networks",
+        "DCV",
+        ["LECTURE", "LAB"]
     ),
 
 

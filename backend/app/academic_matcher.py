@@ -99,6 +99,16 @@ def similarity(
     if not first or not second:
         return 0.0
 
+    if first == second:
+        return 1.0
+
+    if second in first:
+        coverage = len(second) / len(first)
+        return max(0.70 + 0.28 * coverage, SequenceMatcher(None, first, second).ratio())
+
+    if len(first) >= 2 and first in second:
+        return max(0.85, SequenceMatcher(None, first, second).ratio())
+
     return SequenceMatcher(
         None,
         first,

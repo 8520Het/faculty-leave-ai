@@ -63,10 +63,18 @@ def similarity(
     if not a or not b:
         return 0.0
 
+    norm_a = normalize_text(a)
+    norm_b = normalize_text(b)
+    if not norm_a or not norm_b:
+        return 0.0
+
+    if norm_b in norm_a or (len(norm_a) >= 2 and norm_a in norm_b):
+        return max(0.85, SequenceMatcher(None, norm_a, norm_b).ratio())
+
     return SequenceMatcher(
         None,
-        normalize_text(a),
-        normalize_text(b)
+        norm_a,
+        norm_b
     ).ratio()
 
 

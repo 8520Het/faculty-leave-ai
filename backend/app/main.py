@@ -149,8 +149,27 @@ def serialize_email(item: EmailPreview) -> dict:
         "assignment_count": item.assignment_count,
         "subject": item.subject,
         "body": item.body,
+        "status": getattr(item, "status", "QUEUED") or "QUEUED",
+        "sent_at": item.sent_at.isoformat() if getattr(item, "sent_at", None) else None,
         "generated_at": item.generated_at.isoformat() if item.generated_at else None,
     }
+
+
+def sync_form_status(form: LeaveForm) -> None:
+    if not form or not form.assignments:
+        return
+    all_reviewed = all(r.reviewed for r in form.assignments)
+    all_ack = len(form.emails) > 0 and all(e.status == "ACKNOWLEDGED" for e in form.emails)
+    any_sent = any(e.status in {"SENT", "ACKNOWLEDGED"} for e in form.emails)
+
+    if all_ack:
+        form.status = "CONFIRMED"
+    elif any_sent:
+        form.status = "NOTIFIED"
+    elif all_reviewed:
+        form.status = "REVIEWED"
+    elif form.status in {"REVIEWED", "CONFIRMED"}:
+        form.status = "NEEDS_REVIEW"
 
 
 def replace_emails(db: Session, form: LeaveForm, previews: list[dict]) -> None:
@@ -164,6 +183,7 @@ def replace_emails(db: Session, form: LeaveForm, previews: list[dict]) -> None:
                 assignment_count=preview.get("assignment_count") or 0,
                 subject=preview.get("subject") or "",
                 body=preview.get("body") or "",
+                status=preview.get("status") or "QUEUED",
             )
         )
 
@@ -265,6 +285,9 @@ def health():
 @app.get("/dashboard")
 def dashboard(db: Session = Depends(get_db)):
     forms = db.query(LeaveForm).order_by(LeaveForm.created_at.desc()).all()
+    for form in forms:
+        sync_form_status(form)
+    db.commit()
     status_counts = {}
     for form in forms:
         status_counts[form.status] = status_counts.get(form.status, 0) + 1
@@ -382,6 +405,9 @@ def run_demo(
 @app.get("/forms")
 def list_forms(db: Session = Depends(get_db)):
     forms = db.query(LeaveForm).order_by(LeaveForm.created_at.desc()).all()
+    for form in forms:
+        sync_form_status(form)
+    db.commit()
     return [serialize_form(form, include_assignments=False) for form in forms]
 
 
@@ -393,13 +419,42 @@ def get_form(form_id: str, db: Session = Depends(get_db)):
     return serialize_form(form)
 
 
+@app.delete("/forms/{form_id}")
+def delete_form(form_id: str, db: Session = Depends(get_db)):
+    form = db.get(LeaveForm, form_id)
+    if form is None:
+        raise HTTPException(status_code=404, detail="Form not found")
+
+    # Clean up processing logs
+    db.query(ProcessingLog).filter(ProcessingLog.form_id == form_id).delete()
+
+    # Clean up physical files on disk
+    try:
+        paths = form_paths(form_id)
+        if paths["root"].exists():
+            shutil.rmtree(paths["root"], ignore_errors=True)
+        raw_target = RAW_DIR / f"{form_id}.png"
+        if raw_target.exists():
+            raw_target.unlink(missing_ok=True)
+    except Exception as exc:
+        print(f"Warning: Failed to delete form disk assets: {exc}")
+
+    # Delete the form (SQLAlchemy cascades delete to assignments and emails)
+    db.delete(form)
+    db.commit()
+    return {"ok": True, "message": f"Form {form_id} deleted successfully"}
+
+
 @app.get("/forms/{form_id}/review")
 def review_form(form_id: str, db: Session = Depends(get_db)):
     form = db.get(LeaveForm, form_id)
     if form is None:
         raise HTTPException(status_code=404, detail="Form not found")
+    sync_form_status(form)
+    db.commit()
+    db.refresh(form)
     return {
-        "form": serialize_form(form, include_assignments=False),
+        "form": serialize_form(form, include_assignments=True),
         "assignments": [serialize_assignment(row) for row in form.assignments],
         "staff": [
             {
@@ -466,9 +521,11 @@ def update_assignment(
     row.payload_json = _dumps(data)
     row.requires_review = bool(data["requires_review"])
     row.reviewed = True
+    sync_form_status(form)
     form.updated_at = _now()
     db.commit()
     db.refresh(row)
+    db.refresh(form)
     return serialize_assignment(row)
 
 
@@ -483,6 +540,7 @@ def generate_emails(form_id: str, db: Session = Depends(get_db)):
         item["applicant_name"] = form.applicant_name
     previews = generate_grouped_email_previews(assignments, year=form.year)
     replace_emails(db, form, previews)
+    sync_form_status(form)
     form.summary_json = _dumps(
         {
             **(_loads(form.summary_json, {}) or {}),
@@ -503,6 +561,79 @@ def generate_emails(form_id: str, db: Session = Depends(get_db)):
 def list_emails(db: Session = Depends(get_db)):
     items = db.query(EmailPreview).order_by(EmailPreview.generated_at.desc()).all()
     return [serialize_email(item) for item in items]
+
+
+@app.post("/emails/{email_id}/send")
+def send_email(email_id: int, db: Session = Depends(get_db)):
+    email = db.get(EmailPreview, email_id)
+    if email is None:
+        raise HTTPException(status_code=404, detail="Email preview not found")
+    email.status = "SENT"
+    email.sent_at = _now()
+    _log(db, email.form_id, f"Notification sent to {email.substitute_name} ({email.to_email})")
+    if email.form:
+        sync_form_status(email.form)
+        email.form.updated_at = _now()
+    db.commit()
+    db.refresh(email)
+    return serialize_email(email)
+
+
+@app.post("/forms/{form_id}/emails/send-all")
+def send_all_emails(form_id: str, db: Session = Depends(get_db)):
+    form = db.get(LeaveForm, form_id)
+    if form is None:
+        raise HTTPException(status_code=404, detail="Form not found")
+    now_time = _now()
+    sent_list = []
+    for email in form.emails:
+        email.status = "SENT"
+        email.sent_at = now_time
+        sent_list.append(email)
+        _log(db, form_id, f"Notification sent to {email.substitute_name} ({email.to_email})")
+    form.status = "NOTIFIED"
+    form.updated_at = now_time
+    db.commit()
+    return {
+        "form_id": form.id,
+        "sent_count": len(sent_list),
+        "emails": [serialize_email(e) for e in form.emails],
+    }
+
+
+@app.get("/faculty/{faculty_email}/notifications")
+def get_faculty_notifications(faculty_email: str, db: Session = Depends(get_db)):
+    target = faculty_email.strip().lower()
+    items = (
+        db.query(EmailPreview)
+        .order_by(EmailPreview.generated_at.desc())
+        .all()
+    )
+    matched = [
+        serialize_email(item)
+        for item in items
+        if item.to_email and (item.to_email.strip().lower() == target or target in item.to_email.lower())
+    ]
+    return {
+        "faculty_email": faculty_email,
+        "count": len(matched),
+        "notifications": matched,
+    }
+
+
+@app.post("/faculty/notifications/{email_id}/acknowledge")
+def acknowledge_notification(email_id: int, db: Session = Depends(get_db)):
+    email = db.get(EmailPreview, email_id)
+    if email is None:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    email.status = "ACKNOWLEDGED"
+    now_time = _now()
+    if email.form:
+        sync_form_status(email.form)
+        email.form.updated_at = now_time
+    db.commit()
+    db.refresh(email)
+    return serialize_email(email)
 
 
 @app.get("/forms/{form_id}/files/{kind}")
@@ -592,3 +723,32 @@ def master_timetable(semester: Optional[int] = None):
         }
         for slot in slots
     ]
+
+
+@app.get("/samples")
+def list_sample_images():
+    samples_dir = PROJECT_ROOT / "samples"
+    if not samples_dir.exists():
+        return []
+    items = []
+    descriptions = {
+        "sample_leave_form_harshad_prajapati.jpg": "Authentic handwritten sheet from Dr. Harshad Prajapati with 2 arrangement rows (covers: Sandeep Suthar & Anand Patel).",
+        "sample_leave_form_anand_patel.jpg": "Filled leave application for Dr. Anand K. Patel (covers: Deepak Vegda & Sandeep Suthar).",
+        "blank_template_ddu.jpg": "Blank Dharmsinh Desai University faculty leave application format.",
+    }
+    for f in sorted(samples_dir.glob("*.jpg")):
+        items.append({
+            "filename": f.name,
+            "title": f.stem.replace("_", " ").title(),
+            "description": descriptions.get(f.name, "Sample faculty leave arrangement form."),
+            "url": f"/samples/{f.name}",
+        })
+    return items
+
+
+@app.get("/samples/{filename}")
+def get_sample_image(filename: str):
+    target = PROJECT_ROOT / "samples" / filename
+    if not target.exists() or target.suffix.lower() not in {".jpg", ".jpeg", ".png"}:
+        raise HTTPException(status_code=404, detail="Sample not found")
+    return FileResponse(target)

@@ -23,6 +23,7 @@ export const api = {
   dashboard: () => request("/dashboard"),
   forms: () => request("/forms"),
   form: (id) => request(`/forms/${id}`),
+  deleteForm: (id) => request(`/forms/${id}`, { method: "DELETE" }),
   review: (id) => request(`/forms/${id}/review`),
   process: (id, demo = false) =>
     request(`/forms/${id}/process`, {
@@ -39,6 +40,15 @@ export const api = {
   emails: () => request("/emails"),
   generateEmails: (formId) =>
     request(`/forms/${formId}/emails`, { method: "POST" }),
+  sendEmail: (emailId) =>
+    request(`/emails/${emailId}/send`, { method: "POST" }),
+  sendAllEmails: (formId) =>
+    request(`/forms/${formId}/emails/send-all`, { method: "POST" }),
+  facultyNotifications: (email) =>
+    request(`/faculty/${encodeURIComponent(email)}/notifications`),
+  acknowledgeNotification: (emailId) =>
+    request(`/faculty/notifications/${emailId}/acknowledge`, { method: "POST" }),
+  samples: () => request("/samples"),
   staff: () => request("/master/staff"),
   subjects: () => request("/master/subjects"),
   rooms: () => request("/master/rooms"),
@@ -69,6 +79,10 @@ export function fileUrl(formId, kind, row) {
   if (row) params.set("row", String(row));
   const query = params.toString();
   return `${API}/forms/${formId}/files/${kind}${query ? `?${query}` : ""}`;
+}
+
+export function sampleUrl(filename) {
+  return `${API}/samples/${filename}`;
 }
 
 export function poll(fn, { interval = 1500, until } = {}) {
