@@ -9,8 +9,9 @@ export const FACULTY_ACCOUNTS = [
     email: "harshad.prajapati@ddu.ac.in",
     password: "password123",
     department: "Information Technology",
-    designation: "Associate Professor",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+    designation: "Professor",
+    avatar: "/faculty/2-HBP.jpg",
+    role: "FACULTY",
   },
   {
     id: 2,
@@ -20,7 +21,8 @@ export const FACULTY_ACCOUNTS = [
     password: "password123",
     department: "Information Technology",
     designation: "Associate Professor",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
+    avatar: "/faculty/17-akp.jpg",
+    role: "FACULTY",
   },
   {
     id: 3,
@@ -30,7 +32,8 @@ export const FACULTY_ACCOUNTS = [
     password: "password123",
     department: "Information Technology",
     designation: "Assistant Professor",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
+    avatar: "/faculty/10-SRS.jpg",
+    role: "FACULTY",
   },
   {
     id: 4,
@@ -40,16 +43,64 @@ export const FACULTY_ACCOUNTS = [
     password: "password123",
     department: "Information Technology",
     designation: "Assistant Professor",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
+    avatar: "/faculty/13-DCV.jpg",
+    role: "FACULTY",
+  },
+  {
+    id: 5,
+    name: "Dr. Vipul K. Dabhi",
+    shortName: "VKD",
+    email: "vipul.dabhi@ddu.ac.in",
+    password: "password123",
+    department: "Information Technology",
+    designation: "Professor & Head",
+    avatar: "/faculty/1-VKD.jpg",
+    role: "ADMIN",
+  },
+  {
+    id: 6,
+    name: "Prof. Nikita Desai",
+    shortName: "NKD",
+    email: "nikita.desai@ddu.ac.in",
+    password: "password123",
+    department: "Information Technology",
+    designation: "Associate Professor",
+    avatar: "/faculty/3-NKD1.jpg",
+    role: "FACULTY",
+  },
+  {
+    id: 7,
+    name: "Prof. Archana N. Vyas",
+    shortName: "ANV",
+    email: "archana.vyas@ddu.ac.in",
+    password: "password123",
+    department: "Information Technology",
+    designation: "Assistant Professor",
+    avatar: "/faculty/12-ANV.jpg",
+    role: "FACULTY",
+  },
+  {
+    id: 8,
+    name: "Prof. Sunil K. Vithlani",
+    shortName: "SKV",
+    email: "sunil.vithlani@ddu.ac.in",
+    password: "password123",
+    department: "Information Technology",
+    designation: "Assistant Professor",
+    avatar: "/faculty/14-SKV.jpg",
+    role: "FACULTY",
   },
 ];
+
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [faculty, setFaculty] = useState(() => {
     try {
-      const saved = localStorage.getItem("faculty_user");
+      // Clear legacy localStorage so the portal always requests credentials on fresh start
+      localStorage.removeItem("faculty_user");
+      const saved = sessionStorage.getItem("faculty_user");
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -64,7 +115,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (faculty) {
-      localStorage.setItem("faculty_user", JSON.stringify(faculty));
+      sessionStorage.setItem("faculty_user", JSON.stringify(faculty));
       refreshNotifications();
 
       // Poll every 2.5 seconds so incoming notifications appear live across browsers
@@ -74,7 +125,7 @@ export function AuthProvider({ children }) {
 
       return () => clearInterval(timer);
     } else {
-      localStorage.removeItem("faculty_user");
+      sessionStorage.removeItem("faculty_user");
       setIncomingCount(0);
     }
   }, [faculty?.email]);
@@ -144,6 +195,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    sessionStorage.removeItem("faculty_user");
     localStorage.removeItem("faculty_user");
     setFaculty(null);
   };
@@ -153,10 +205,15 @@ export function AuthProvider({ children }) {
     localStorage.setItem("google_client_id", id);
   };
 
+  const isAdmin =
+    faculty?.role === "ADMIN" ||
+    faculty?.email?.toLowerCase() === "vipul.dabhi@ddu.ac.in";
+
   return (
     <AuthContext.Provider
       value={{
         faculty,
+        isAdmin,
         FACULTY_ACCOUNTS,
         loginWithCredentials,
         loginWithGoogle,
@@ -171,6 +228,7 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
+
 
 export function useAuth() {
   const context = useContext(AuthContext);

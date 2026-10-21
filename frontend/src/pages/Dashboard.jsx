@@ -23,11 +23,14 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadDashboard();
-  }, []);
+  }, [faculty?.email]);
 
   function loadDashboard() {
     api
-      .dashboard()
+      .dashboard({
+        applicant_name: faculty?.name,
+        faculty_email: faculty?.email,
+      })
       .then(setData)
       .catch((err) => setError(err.message));
   }
@@ -55,8 +58,34 @@ export default function Dashboard() {
     }
   }
 
-  if (error) return <p className="error">{error}</p>;
-  if (!data) return <p className="muted">Loading faculty portal metrics…</p>;
+  if (error) {
+    return (
+      <div className="page-container">
+        <div className="alert-box error" style={{ margin: "2rem 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <strong>Backend Connection Notice:</strong> {error}
+            <div className="text-xs muted" style={{ marginTop: "0.25rem" }}>
+              Ensure the FastAPI backend server is active on http://127.0.0.1:8000.
+            </div>
+          </div>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setError(""); loadDashboard(); }}>
+            Retry Connection
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="page-container">
+        <div className="loading-state" style={{ padding: "3rem", textAlign: "center" }}>
+          <p className="muted">Loading faculty portal metrics…</p>
+        </div>
+      </div>
+    );
+  }
+
 
   const counts = data.status_counts || {};
 

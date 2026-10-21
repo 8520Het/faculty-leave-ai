@@ -10,10 +10,12 @@ import {
   LogOut,
   ChevronDown,
   Building,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function Navbar() {
-  const { faculty, logout, incomingCount } = useAuth();
+  const { faculty, isAdmin, logout, incomingCount } = useAuth();
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
@@ -64,11 +66,25 @@ export default function Navbar() {
           <span>Notifications</span>
         </NavLink>
 
-        <NavLink to="/master" className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}>
+        <NavLink to="/my-schedule" className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}>
           <Calendar size={17} />
-          <span>Timetable Master</span>
+          <span>My Schedule</span>
         </NavLink>
+
+        {isAdmin && (
+          <NavLink
+            to="/admin"
+            className={({ isActive }) =>
+              isActive ? "nav-item active admin-nav-item" : "nav-item admin-nav-item"
+            }
+            style={{ color: "var(--primary)", fontWeight: 600 }}
+          >
+            <ShieldCheck size={17} />
+            <span>Admin Panel</span>
+          </NavLink>
+        )}
       </nav>
+
 
       <div className="nav-user-section" ref={dropdownRef}>
         {faculty ? (

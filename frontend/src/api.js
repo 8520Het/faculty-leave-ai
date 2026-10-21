@@ -1,7 +1,15 @@
 const API = "/api";
 
 async function request(path, options = {}) {
-  const response = await fetch(`${API}${path}`, options);
+  let response;
+  try {
+    response = await fetch(`${API}${path}`, options);
+  } catch (err) {
+    if (err?.message && (err.message.includes("Failed to fetch") || err.message.includes("NetworkError"))) {
+      throw new Error("Unable to connect to backend server. Please verify backend is running on http://127.0.0.1:8000.");
+    }
+    throw err;
+  }
   if (!response.ok) {
     let detail = `${response.status} ${response.statusText}`;
     try {
@@ -18,13 +26,32 @@ async function request(path, options = {}) {
   return response.json();
 }
 
+
 export const api = {
   health: () => request("/health"),
-  dashboard: () => request("/dashboard"),
-  forms: () => request("/forms"),
+  dashboard: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.applicant_name) query.set("applicant_name", params.applicant_name);
+    if (params.faculty_email) query.set("faculty_email", params.faculty_email);
+    const qs = query.toString();
+    return request(qs ? `/dashboard?${qs}` : "/dashboard");
+  },
+  forms: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.applicant_name) query.set("applicant_name", params.applicant_name);
+    if (params.faculty_email) query.set("faculty_email", params.faculty_email);
+    const qs = query.toString();
+    return request(qs ? `/forms?${qs}` : "/forms");
+  },
   form: (id) => request(`/forms/${id}`),
   deleteForm: (id) => request(`/forms/${id}`, { method: "DELETE" }),
-  review: (id) => request(`/forms/${id}/review`),
+  review: (id, params = {}) => {
+    const query = new URLSearchParams();
+    if (params.applicant_name) query.set("applicant_name", params.applicant_name);
+    if (params.faculty_email) query.set("faculty_email", params.faculty_email);
+    const qs = query.toString();
+    return request(qs ? `/forms/${id}/review?${qs}` : `/forms/${id}/review`);
+  },
   process: (id, demo = false) =>
     request(`/forms/${id}/process`, {
       method: "POST",
@@ -37,7 +64,57 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     }),
-  emails: () => request("/emails"),
+  emails: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.faculty_email) query.set("faculty_email", params.faculty_email);
+    if (params.faculty_name) query.set("faculty_name", params.faculty_name);
+    if (params.is_admin) query.set("is_admin", "true");
+    const qs = query.toString();
+    return request(qs ? `/emails?${qs}` : "/emails");
+  },
+  adminEmails: () => request("/admin/emails"),
+  adminForms: () => request("/admin/forms"),
+  uploadTimetable: async (file) => {
+    const data = new FormData();
+    data.append("file", file);
+    return request("/admin/timetable/upload", { method: "POST", body: data });
+  },
+  loadSampleTimetable: (sampleKey = "VII-F") =>
+    request(`/admin/timetable/load-sample?sample_key=${sampleKey}`, { method: "POST" }),
+  commitTimetable: (payload) =>
+    request("/admin/timetable/commit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  adminTimetableEntries: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.semester) query.set("semester", params.semester);
+    if (params.division) query.set("division", params.division);
+    const qs = query.toString();
+    return request(qs ? `/admin/timetable/entries?${qs}` : "/admin/timetable/entries");
+  },
+  deleteTimetableEntries: (semester, division) =>
+    request(`/admin/timetable/entries?semester=${encodeURIComponent(semester)}&division=${encodeURIComponent(division)}`, {
+      method: "DELETE",
+    }),
+  clearAllTimetables: () =>
+    request("/admin/timetable/entries?clear_all=true", { method: "DELETE" }),
+  seedDefaultTimetables: () =>
+    request("/admin/timetable/seed-defaults", { method: "POST" }),
+  mySchedule: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.faculty_email) query.set("faculty_email", params.faculty_email);
+    if (params.faculty_name) query.set("faculty_name", params.faculty_name);
+    const qs = query.toString();
+    return request(qs ? `/timetable/my-schedule?${qs}` : "/timetable/my-schedule");
+  },
+  checkConflict: (payload) =>
+    request("/timetable/check-conflict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
   generateEmails: (formId) =>
     request(`/forms/${formId}/emails`, { method: "POST" }),
   sendEmail: (emailId) =>

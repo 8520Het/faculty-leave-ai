@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 
 export default function Notifications() {
-  const { faculty, refreshNotifications } = useAuth();
+  const { faculty, isAdmin, refreshNotifications } = useAuth();
   const [tab, setTab] = useState("my-inbox"); // 'my-inbox' | 'all-dispatched'
   const [inboxNotifications, setInboxNotifications] = useState([]);
   const [allEmails, setAllEmails] = useState([]);
@@ -32,7 +32,11 @@ export default function Notifications() {
     const timer = setInterval(() => {
       if (faculty?.email) {
         Promise.all([
-          api.emails(),
+          api.emails({
+            faculty_email: faculty.email,
+            faculty_name: faculty.name,
+            is_admin: isAdmin,
+          }),
           api.facultyNotifications(faculty.email),
         ])
           .then(([allList, facultyRes]) => {
@@ -44,14 +48,18 @@ export default function Notifications() {
     }, 2500);
 
     return () => clearInterval(timer);
-  }, [faculty?.email]);
+  }, [faculty?.email, isAdmin]);
 
   async function loadData() {
     setLoading(true);
     setError("");
     try {
       const [allList, facultyRes] = await Promise.all([
-        api.emails(),
+        api.emails({
+          faculty_email: faculty?.email,
+          faculty_name: faculty?.name,
+          is_admin: isAdmin,
+        }),
         faculty?.email ? api.facultyNotifications(faculty.email) : Promise.resolve({ notifications: [] }),
       ]);
       setAllEmails(allList || []);
@@ -80,7 +88,9 @@ export default function Notifications() {
       <div className="page-header">
         <h2>Faculty Notification Desk</h2>
         <p className="lede">
-          Review automated substitute arrangement notifications sent to faculty members.
+          {isAdmin
+            ? "Administrative oversight of substitute arrangement notifications department-wide."
+            : "Review lecture substitution requests assigned to you or dispatched for your classes."}
         </p>
       </div>
 
@@ -99,9 +109,14 @@ export default function Notifications() {
           onClick={() => setTab("all-dispatched")}
         >
           <Mail size={16} />
-          <span>All Department Notifications ({allEmails.length})</span>
+          <span>
+            {isAdmin
+              ? `All Department Notifications (${allEmails.length})`
+              : `My Dispatched Notifications (${allEmails.length})`}
+          </span>
         </button>
       </div>
+
 
       {actionMessage && (
         <div className="alert-box success">

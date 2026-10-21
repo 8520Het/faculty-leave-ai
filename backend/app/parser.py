@@ -253,43 +253,35 @@ def extract_time_range(text: str):
     # Normalize common handwritten OCR quirks:
     # 1. 10130, 11130 -> 10:30, 11:30
     time_text = re.sub(r"\b(1[0-2])1(30|00)\b", r"\1:\2", text, flags=re.IGNORECASE)
-    # 2. 2i30, 3i30, 2l30 -> 2:30, 3:30
-    time_text = re.sub(r"\b(\d{1,2})[iIl|]((?:[0-5]\d|[0-5][coCO]))", r"\1:\2", time_text)
-    # 3. :3c, .3c, :3o -> :30
+    # 2. 2i30, 3i30, 2l30, 03c30, 02i30 -> 2:30, 3:30, 03:30, 02:30
+    time_text = re.sub(r"\b(\d{1,2})[iIl|c.](\d{2})\b", r"\1:\2", time_text)
+    # 3. Handle OCR 'c' or 'o' for zero: :3c, .3c, :3o -> :30
+    time_text = re.sub(r"\b(\d{1,2})[iIl|c.]([0-5])[coCO]\b", r"\1:\g<2>0", time_text)
     time_text = re.sub(r"[:.]([0-5])[coCO]\b", r":\g<1>0", time_text)
     # 4. Standard dot as time separator: 2.30 -> 2:30
     time_text = re.sub(r"(?<=\d)[.](?=\d{2}\b)", ":", time_text)
 
     # Find candidate times:
-    # 2:30-3:30, 10:30-11:30
     times = re.findall(
         r"\b(\d{1,2})[:.](\d{2})\b",
         time_text
     )
 
     valid_times = []
-
     for hour_text, minute_text in times:
-
         hour = int(hour_text)
         minute = int(minute_text)
-
-        if (
-            1 <= hour <= 12
-            and
-            0 <= minute <= 59
-        ):
-
-            valid_times.append(
-                f"{hour:02d}:{minute:02d}"
-            )
+        if 1 <= hour <= 12 and 0 <= minute <= 59:
+            valid_times.append(f"{hour:02d}:{minute:02d}")
 
     if len(valid_times) >= 2:
-
-        return (
-            valid_times[0],
-            valid_times[1]
-        )
+        return valid_times[0], valid_times[1]
+    elif len(valid_times) == 1:
+        # If single time found (e.g. 02:30), infer 1-hour standard lecture period (02:30 -> 03:30)
+        h_str, m_str = valid_times[0].split(":")
+        h = int(h_str)
+        next_h = 1 if h == 12 else h + 1
+        return valid_times[0], f"{next_h:02d}:{m_str}"
 
     return None, None
 

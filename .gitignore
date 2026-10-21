@@ -6,29 +6,30 @@ __pycache__/
 # Virtual environment
 backend/.venv/
 .venv/
+train_gpu_env/
 
 # Environment variables
 .env
 backend/.env
 
-# Node
+# Node & Frontend
 frontend/node_modules/
 frontend/dist/
 
-# VS Code
+# IDE & OS files
 .vscode/
-
-# OS files
 Thumbs.db
 .DS_Store
 
-# Leave form data
+# Leave form data & SQLite Databases
 data/raw/*
 data/processed/*
 data/crops/*
 data/forms/*
 data/*.db
 data/*.db-journal
+backend/*.db
+backend/*.db-journal
 
 # Keep folders
 !data/raw/.gitkeep
@@ -36,6 +37,13 @@ data/*.db-journal
 !data/crops/.gitkeep
 !data/forms/.gitkeep
 
-# Frontend
-frontend/node_modules/
-frontend/dist/
+# Machine Learning Checkpoints & Weights
+trocr_dataset/
+trocr_faculty_checkpoints/
+backend/models/
+
+# Media, Video Demos & Archives
+docs/demo/
+*.mp4
+*.mp3
+*.zip

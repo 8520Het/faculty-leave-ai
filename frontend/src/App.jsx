@@ -6,7 +6,10 @@ import Upload from "./pages/Upload.jsx";
 import Review from "./pages/Review.jsx";
 import Notifications from "./pages/Notifications.jsx";
 import MasterData from "./pages/MasterData.jsx";
+import AdminPanel from "./pages/AdminPanel.jsx";
+import MySchedule from "./pages/MySchedule.jsx";
 import Login from "./pages/Login.jsx";
+
 
 function ProtectedRoute({ children }) {
   const { faculty } = useAuth();
@@ -65,6 +68,22 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminPanel />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-schedule"
+            element={
+              <ProtectedRoute>
+                <MySchedule />
+              </ProtectedRoute>
+            }
+          />
           {/* Backwards compatibility aliases */}
           <Route path="/emails" element={<Navigate to="/notifications" replace />} />
           <Route path="/history" element={<Navigate to="/" replace />} />
@@ -77,6 +96,7 @@ function AppContent() {
             }
           />
           <Route path="*" element={<Navigate to={faculty ? "/" : "/login"} replace />} />
+
         </Routes>
       </main>
     </div>

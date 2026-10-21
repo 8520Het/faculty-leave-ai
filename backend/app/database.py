@@ -108,6 +108,28 @@ class ProcessingLog(Base):
     )
 
 
+class TimetableEntry(Base):
+    __tablename__ = "timetable_entries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    academic_year: Mapped[str] = mapped_column(String(50), default="2026-27")
+    semester: Mapped[str] = mapped_column(String(20), default="VII")
+    division: Mapped[str] = mapped_column(String(10), default="F")
+    day: Mapped[str] = mapped_column(String(20))
+    time_slot: Mapped[str] = mapped_column(String(50))
+    room: Mapped[str] = mapped_column(String(50), default="")
+    subject: Mapped[str] = mapped_column(String(100), default="")
+    faculty_code: Mapped[str] = mapped_column(String(50), default="")
+    faculty_name: Mapped[str] = mapped_column(String(255), default="")
+    batch: Mapped[Optional[str]] = mapped_column(String(30), nullable=True, default="ALL")
+    is_lab: Mapped[bool] = mapped_column(Boolean, default=False)
+    raw_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+
+
+
 engine = create_engine(
     f"sqlite:///{DB_PATH.as_posix()}",
     connect_args={"check_same_thread": False},

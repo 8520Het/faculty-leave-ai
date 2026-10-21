@@ -31,7 +31,7 @@ export default function Upload() {
 
   const [file, setFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
-  const [applicantName, setApplicantName] = useState(faculty?.name || "Dr. Harshad B. Prajapati");
+  const [applicantName, setApplicantName] = useState(faculty?.name || "");
   const [year, setYear] = useState(2026);
   const [demo, setDemo] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -220,15 +220,19 @@ export default function Upload() {
             <div>
               <label htmlFor="applicantName">
                 <User size={14} style={{ display: "inline", marginRight: "4px" }} />
-                Applicant Faculty Name
+                Applicant Faculty (Authenticated Account)
               </label>
               <input
                 id="applicantName"
-                value={applicantName}
-                onChange={(e) => setApplicantName(e.target.value)}
-                placeholder="e.g. Dr. Harshad B. Prajapati"
+                value={faculty?.name || applicantName}
+                readOnly
+                style={{ backgroundColor: "var(--panel-bg)", cursor: "not-allowed" }}
+                placeholder="Logged in faculty name"
                 required
               />
+              <span className="text-xs muted" style={{ display: "block", marginTop: "4px" }}>
+                🔒 Locked to your session ({faculty?.email}). Form's "Name in Full" will be validated against this.
+              </span>
             </div>
 
             <div>

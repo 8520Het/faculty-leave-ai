@@ -32,14 +32,16 @@ def _load_trocr():
         )
         raise RuntimeError(_MODEL_LOAD_ERROR) from exc
 
-    print("Loading TrOCR model...")
+    fine_tuned_dir = PROJECT_ROOT / "models" / "trocr-fine-tuned-faculty"
+    if fine_tuned_dir.exists() and (fine_tuned_dir / "config.json").exists():
+        model_source = str(fine_tuned_dir)
+        print(f"Loading custom fine-tuned TrOCR model from: {model_source}")
+    else:
+        model_source = "microsoft/trocr-base-handwritten"
+        print(f"Loading base TrOCR model from: {model_source}")
 
-    PROCESSOR = TrOCRProcessor.from_pretrained(
-        "microsoft/trocr-base-handwritten"
-    )
-    MODEL = VisionEncoderDecoderModel.from_pretrained(
-        "microsoft/trocr-base-handwritten"
-    )
+    PROCESSOR = TrOCRProcessor.from_pretrained(model_source)
+    MODEL = VisionEncoderDecoderModel.from_pretrained(model_source)
     DEVICE = torch.device(
         "cuda" if torch.cuda.is_available() else "cpu"
     )

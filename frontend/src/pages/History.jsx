@@ -1,14 +1,22 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
+import { useAuth } from "../context/AuthContext";
 
 export default function History() {
+  const { faculty } = useAuth();
   const [forms, setForms] = useState([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api.forms().then(setForms).catch((err) => setError(err.message));
-  }, []);
+    api
+      .forms({
+        applicant_name: faculty?.name,
+        faculty_email: faculty?.email,
+      })
+      .then(setForms)
+      .catch((err) => setError(err.message));
+  }, [faculty?.email]);
 
   return (
     <section>
